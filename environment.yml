@@ -1,0 +1,11 @@
+name: bigbrain
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - "fastmcp>=2,<3"
+      - "pydantic>=2.0"
+      - pytest
+      - pytest-asyncio
