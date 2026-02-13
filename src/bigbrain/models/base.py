@@ -5,6 +5,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
 from bigbrain.config import DEFAULT_TIMEOUT
 
@@ -42,8 +43,13 @@ class CLIModelAdapter(ABC):
         """Extract the model's answer from CLI output."""
 
     def build_env(self) -> dict[str, str]:
-        """Return environment dict for subprocess. Override to inject API keys."""
-        return dict(os.environ)
+        """Return environment dict for subprocess with ~/.npm-global/bin on PATH."""
+        env = dict(os.environ)
+        npm_bin = str(Path.home() / ".npm-global" / "bin")
+        path = env.get("PATH", "")
+        if npm_bin not in path:
+            env["PATH"] = f"{npm_bin}:{path}"
+        return env
 
     async def ask(
         self, prompt: str, timeout: float = DEFAULT_TIMEOUT

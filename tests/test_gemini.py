@@ -12,6 +12,7 @@ def test_gemini_build_command():
     adapter = GeminiAdapter()
     cmd = adapter.build_command("hello world")
     assert cmd[0] == adapter.cli_command
+    assert "--model" in cmd
     assert "-p" in cmd
     assert "hello world" in cmd
     assert "--output-format" in cmd

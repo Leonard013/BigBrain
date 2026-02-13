@@ -1,9 +1,8 @@
 """Gemini CLI adapter — invokes `gemini -p` and parses JSON output."""
 
 import json
-import os
 
-from bigbrain.config import GEMINI_CMD
+from bigbrain.config import GEMINI_CMD, GEMINI_MODEL
 from bigbrain.models.base import CLIModelAdapter
 
 
@@ -17,15 +16,12 @@ class GeminiAdapter(CLIModelAdapter):
         return GEMINI_CMD
 
     def build_command(self, prompt: str) -> list[str]:
-        return [self.cli_command, "-p", prompt, "--output-format", "json"]
-
-    def build_env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        # GEMINI_API_KEY takes precedence, fall back to GOOGLE_API_KEY
-        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        if api_key:
-            env["GEMINI_API_KEY"] = api_key
-        return env
+        return [
+            self.cli_command,
+            "--model", GEMINI_MODEL,
+            "-p", prompt,
+            "--output-format", "json",
+        ]
 
     def parse_output(self, stdout: str, stderr: str) -> str:
         """Parse JSON output from gemini -p --output-format json.

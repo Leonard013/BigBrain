@@ -1,9 +1,8 @@
 """Codex CLI adapter — invokes `codex exec` and parses JSONL event stream."""
 
 import json
-import os
 
-from bigbrain.config import CODEX_CMD
+from bigbrain.config import CODEX_CMD, CODEX_MODEL
 from bigbrain.models.base import CLIModelAdapter
 
 
@@ -17,21 +16,20 @@ class CodexAdapter(CLIModelAdapter):
         return CODEX_CMD
 
     def build_command(self, prompt: str) -> list[str]:
-        return [self.cli_command, "exec", "--quiet", "--json", "--full-auto", prompt]
-
-    def build_env(self) -> dict[str, str]:
-        env = dict(os.environ)
-        # CODEX_API_KEY takes precedence, fall back to OPENAI_API_KEY
-        api_key = os.environ.get("CODEX_API_KEY") or os.environ.get("OPENAI_API_KEY")
-        if api_key:
-            env["OPENAI_API_KEY"] = api_key
-        return env
+        return [
+            self.cli_command, "exec",
+            "--model", CODEX_MODEL,
+            "--json", "--full-auto", "--skip-git-repo-check",
+            prompt,
+        ]
 
     def parse_output(self, stdout: str, stderr: str) -> str:
         """Parse JSONL event stream from codex exec --json.
 
-        Looks for item.completed events with item.type == "agent_message"
-        and extracts their text content.
+        Per docs, item.completed events have: {"type":"item.completed",
+        "item":{"id":"...","type":"agent_message","text":"..."}}
+        The text field lives directly on item, not in a nested content array.
+        Also handles content array format as fallback for compatibility.
         """
         messages: list[str] = []
         for line in stdout.strip().splitlines():
@@ -43,22 +41,21 @@ class CodexAdapter(CLIModelAdapter):
             except json.JSONDecodeError:
                 continue
 
-            # Handle codex JSONL event format
             event_type = event.get("type")
             if event_type == "item.completed":
                 item = event.get("item", {})
                 if item.get("type") == "agent_message":
-                    # Extract text from content array
+                    # Primary: text directly on item (documented format)
+                    text = item.get("text", "").strip()
+                    if text:
+                        messages.append(text)
+                        continue
+                    # Fallback: content array format
                     for part in item.get("content", []):
-                        if part.get("type") == "output_text":
-                            text = part.get("text", "").strip()
-                            if text:
-                                messages.append(text)
-            elif event_type == "message":
-                # Simpler message format fallback
-                text = event.get("content", "").strip()
-                if text:
-                    messages.append(text)
+                        if isinstance(part, dict):
+                            t = part.get("text", "").strip()
+                            if t:
+                                messages.append(t)
 
         if messages:
             return "\n\n".join(messages)

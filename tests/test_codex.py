@@ -13,31 +13,40 @@ def test_codex_build_command():
     cmd = adapter.build_command("hello world")
     assert cmd[0] == adapter.cli_command
     assert "exec" in cmd
-    assert "--quiet" in cmd
+    assert "--model" in cmd
     assert "--json" in cmd
     assert "--full-auto" in cmd
+    assert "--skip-git-repo-check" in cmd
     assert "hello world" in cmd
 
 
-def test_codex_parse_jsonl_agent_message():
-    """Parses item.completed events with agent_message type."""
+def test_codex_parse_documented_format():
+    """Parses the documented format: item.text directly on the item object."""
     adapter = CodexAdapter()
     stdout = (
-        '{"type":"item.completed","item":{"type":"agent_message",'
-        '"content":[{"type":"output_text","text":"Hello from Codex"}]}}\n'
+        '{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"Hello from Codex"}}\n'
     )
     result = adapter.parse_output(stdout, "")
     assert result == "Hello from Codex"
+
+
+def test_codex_parse_content_array_fallback():
+    """Parses fallback content array format for compatibility."""
+    adapter = CodexAdapter()
+    stdout = (
+        '{"type":"item.completed","item":{"type":"agent_message",'
+        '"content":[{"text":"Hello via content array"}]}}\n'
+    )
+    result = adapter.parse_output(stdout, "")
+    assert result == "Hello via content array"
 
 
 def test_codex_parse_multiple_messages():
     """Concatenates multiple agent messages."""
     adapter = CodexAdapter()
     stdout = (
-        '{"type":"item.completed","item":{"type":"agent_message",'
-        '"content":[{"type":"output_text","text":"First"}]}}\n'
-        '{"type":"item.completed","item":{"type":"agent_message",'
-        '"content":[{"type":"output_text","text":"Second"}]}}\n'
+        '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"First"}}\n'
+        '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"Second"}}\n'
     )
     result = adapter.parse_output(stdout, "")
     assert "First" in result
