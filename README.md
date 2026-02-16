@@ -1,36 +1,53 @@
 # BigBrain
 
-MCP server that lets Claude Code talk to Codex (OpenAI) and Gemini (Google) CLIs. Claude stays in charge — the other models provide second opinions.
+MCP server that lets Claude Code talk to Codex (OpenAI) and Gemini (Google) CLIs. Claude stays in charge — the other models provide second opinions. No API keys needed; both CLIs use their own cached OAuth.
 
-## How It Works
+Inspired by [Karpathy's llm-council](https://github.com/karpathy/llm-council).
+
+## Architecture
 
 ```
-You <-> Claude Code <-> BigBrain MCP Server <-> Codex CLI / Gemini CLI
+You
+ └─> Claude Code (chairman — decides, writes memory, synthesizes)
+       └─> BigBrain MCP Server (Python, FastMCP, stdio)
+             ├─> Codex CLI  (async subprocess)
+             └─> Gemini CLI (async subprocess)
 ```
 
-- Claude calls tools like `ask_codex`, `ask_gemini`, or `ask_both_models` mid-conversation
-- BigBrain spawns the CLIs as async subprocesses and returns structured responses
-- Every prompt sent to Codex/Gemini is prepended with the current project's `CLAUDE.md` and `MEMORY.md` as read-only context
-- Both CLIs authenticate via their own cached OAuth — no API keys needed
+**Shared context**: Every prompt sent to Codex/Gemini is automatically prepended with the current project's `CLAUDE.md` and `MEMORY.md`. Claude is the sole writer of these files; the other models only read them.
+
+**Dynamic project detection**: All tools accept an optional `project_path` param. Falls back to `BIGBRAIN_PROJECT_PATH` env var, then cwd. Works with any Claude Code project.
 
 ## Tools
 
 | Tool | What it does |
 |------|-------------|
-| `ask_codex` | Ask Codex a question |
-| `ask_gemini` | Ask Gemini a question |
-| `ask_both_models` | Ask both in parallel |
-| `request_consensus` | Both answer, then synthesize agreements/differences |
-| `request_debate` | Multi-round debate (1-5 rounds) |
-| `request_council` | Three-stage council (inspired by [Karpathy's llm-council](https://github.com/karpathy/llm-council)) |
+| `ask_codex` | Ask Codex a single question |
+| `ask_gemini` | Ask Gemini a single question |
+| `ask_both_models` | Ask both in parallel, get both answers |
+| `request_consensus` | Both answer independently, then one synthesizes agreements/differences |
+| `request_debate` | Multi-round debate — each model sees the other's previous answer (1-5 rounds) |
+| `request_council` | Three-stage council with anonymized peer review (see below) |
 
-### Council (three-stage process)
+## Council — Three-Stage Process
 
-1. **Individual** — Codex and Gemini answer independently
-2. **Peer Review** — each model reviews all answers (anonymized as Model A/B/C), ranks and critiques them
-3. **Chairman** — Claude receives everything and synthesizes the final answer
+The most thorough tool. Based on [Karpathy's llm-council](https://github.com/karpathy/llm-council):
 
-Claude can optionally include its own opinion as one of the anonymized responses, so the other models review it without bias.
+```
+Stage 1: Individual          Stage 2: Peer Review         Stage 3: Chairman
+┌─────────┐                  ┌─────────┐                  ┌─────────┐
+│ Codex   │──> Answer A      │ Codex   │──> Reviews &     │ Claude  │──> Final
+│ Gemini  │──> Answer B      │ Gemini  │    ranks all     │         │   answer
+│ Claude* │──> Answer C      │         │    (anonymized)  │         │
+└─────────┘                  └─────────┘                  └─────────┘
+    (parallel)                   (parallel)                (chairman)
+```
+
+1. **Individual** — Codex and Gemini answer the question independently and in parallel
+2. **Peer Review** — All answers are anonymized (Model A/B/C) and sent to each model for ranking and critique. No model knows which answer is whose.
+3. **Chairman** — Claude receives all individual answers + all peer reviews + the identity map, and synthesizes the final answer
+
+*Claude can optionally include its own opinion as one of the anonymized responses via `claude_opinion`, so the other models critique it without knowing it's Claude's.
 
 ## Setup
 
@@ -40,7 +57,7 @@ Claude can optionally include its own opinion as one of the anonymized responses
 npm install -g @openai/codex @google/gemini-cli
 ```
 
-Authenticate each one:
+Authenticate each (one-time):
 
 ```bash
 codex   # follow OAuth prompts
@@ -81,15 +98,29 @@ exec /path/to/miniconda3/envs/bigbrain/bin/python -m bigbrain.server "$@"
 
 ### 5. Restart Claude Code
 
-Start a new session. Run `/mcp` to verify `bigbrain` shows as connected.
+Start a new session. Run `/mcp` — `bigbrain` should show as connected.
 
 ## Configuration
 
-Models are configurable via environment variables:
+Models default to `gpt-5.3-codex` and `gemini-3-pro-preview`. Override via env vars:
 
 ```bash
-export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"          # default
-export BIGBRAIN_GEMINI_MODEL="gemini-3-pro-preview"   # default
+export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"
+export BIGBRAIN_GEMINI_MODEL="gemini-3-pro-preview"
+```
+
+## Project Structure
+
+```
+src/bigbrain/
+  server.py        # FastMCP app — all 6 MCP tools
+  config.py        # Paths, timeouts, model names
+  context.py       # CLAUDE.md + MEMORY.md reader
+  models/
+    base.py        # Abstract CLIModelAdapter (async subprocess)
+    codex.py       # Codex CLI adapter
+    gemini.py      # Gemini CLI adapter
+  orchestrator.py  # Parallel, consensus, debate, council patterns
 ```
 
 ## Dev
