@@ -130,3 +130,13 @@ src/bigbrain/
 # reinstall after changes
 /path/to/miniconda3/envs/bigbrain/bin/pip install -e .
 ```
+
+## Origin Story
+
+This project was born on a Saturday night vibecoding session fueled by spiced rum. The kind of evening where you look at your API bill, look at your glass, and think: "there has to be a better way."
+
+Turns out, both Codex and Gemini have CLIs with free OAuth access. So instead of paying per token like a responsible adult, BigBrain just shells out to the CLIs like a genius cheapskate. No API keys. No billing surprises on Monday morning. Just three AI models arguing with each other over stdio while you sip your drink.
+
+Does it work? Yes. Is it elegant? Debatable. Did it save money? Absolutely. Will your future self thank your rum-fueled past self? Also debatable.
+
+Enjoy responsibly (the rum and the code).
