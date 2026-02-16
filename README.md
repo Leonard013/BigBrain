@@ -31,23 +31,21 @@ You
 
 ## Council — Three-Stage Process
 
-The most thorough tool. Based on [Karpathy's llm-council](https://github.com/karpathy/llm-council):
+The most thorough tool. All three models participate equally. Based on [Karpathy's llm-council](https://github.com/karpathy/llm-council):
 
 ```
 Stage 1: Individual          Stage 2: Peer Review         Stage 3: Chairman
 ┌─────────┐                  ┌─────────┐                  ┌─────────┐
-│ Codex   │──> Answer A      │ Codex   │──> Reviews &     │ Claude  │──> Final
-│ Gemini  │──> Answer B      │ Gemini  │    ranks all     │         │   answer
-│ Claude* │──> Answer C      │         │    (anonymized)  │         │
+│ Claude  │──> Answer A      │ Codex   │──> Reviews &     │ Claude  │──> Final
+│ Codex   │──> Answer B      │ Gemini  │    ranks all     │         │   answer
+│ Gemini  │──> Answer C      │ Claude  │    (anonymized)  │         │
 └─────────┘                  └─────────┘                  └─────────┘
-    (parallel)                   (parallel)                (chairman)
+  (all three)                  (all three)                 (chairman)
 ```
 
-1. **Individual** — Codex and Gemini answer the question independently and in parallel
-2. **Peer Review** — All answers are anonymized (Model A/B/C) and sent to each model for ranking and critique. No model knows which answer is whose.
-3. **Chairman** — Claude receives all individual answers + all peer reviews + the identity map, and synthesizes the final answer
-
-*Claude can optionally include its own opinion as one of the anonymized responses via `claude_opinion`, so the other models critique it without knowing it's Claude's.
+1. **Individual** — Claude forms its opinion first, then Codex and Gemini answer independently in parallel. All three answers collected.
+2. **Peer Review** — All answers are anonymized as Model A/B/C. Codex and Gemini each review and rank them. Claude receives the same anonymized prompt and does its own review too. No model knows which answer is whose.
+3. **Chairman** — Claude synthesizes all three individual answers + all three peer reviews into the final answer.
 
 ## Setup
 

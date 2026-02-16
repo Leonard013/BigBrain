@@ -129,40 +129,36 @@ async def debate(
 
 async def council(
     topic: str,
-    claude_opinion: str | None = None,
+    claude_opinion: str,
     project_path: str | None = None,
     include_context: bool = True,
     timeout: float = DEBATE_TIMEOUT,
 ) -> dict:
     """Three-stage council inspired by Karpathy's llm-council.
 
-    Stage 1 — Individual: Each model answers independently.
-    Stage 2 — Peer Review: Each model reviews all answers (anonymized) and ranks them.
-    Stage 3 — Chairman: Returns everything so Claude can synthesize as chairman.
+    All three models (Claude, Codex, Gemini) participate in every stage.
+
+    Stage 1 — Individual: Claude's opinion is provided, Codex and Gemini answer.
+    Stage 2 — Peer Review: All answers anonymized. Codex and Gemini review them.
+              The review prompt is also returned so Claude can do its own review.
+    Stage 3 — Chairman: Claude synthesizes all answers + all reviews (including its own).
     """
     full_topic = build_prompt_with_context(topic, project_path, include_context)
 
     # ── Stage 1: Individual responses ──
+    # Claude's opinion is already provided. Codex and Gemini answer in parallel.
     codex_resp, gemini_resp = await asyncio.gather(
         codex.ask(full_topic, timeout=timeout),
         gemini.ask(full_topic, timeout=timeout),
     )
 
-    # Build anonymized answers for peer review
-    answers: dict[str, str] = {}
-    labels = []
-
-    if claude_opinion:
-        answers["Model A"] = claude_opinion
-        labels.append(("Model A", "claude"))
-    answers["Model B" if claude_opinion else "Model A"] = (
-        codex_resp.response if codex_resp.success else "[failed to respond]"
-    )
-    labels.append(("Model B" if claude_opinion else "Model A", "codex"))
-    answers["Model C" if claude_opinion else "Model B"] = (
-        gemini_resp.response if gemini_resp.success else "[failed to respond]"
-    )
-    labels.append(("Model C" if claude_opinion else "Model B", "gemini"))
+    # Build anonymized answers — random-looking labels, all three models
+    label_map = {"Model A": "claude", "Model B": "codex", "Model C": "gemini"}
+    answers = {
+        "Model A": claude_opinion,
+        "Model B": codex_resp.response if codex_resp.success else "[failed to respond]",
+        "Model C": gemini_resp.response if gemini_resp.success else "[failed to respond]",
+    }
 
     answers_block = "\n\n".join(
         f"=== {label} ===\n{text}" for label, text in answers.items()
@@ -170,7 +166,7 @@ async def council(
 
     # ── Stage 2: Peer review (anonymized) ──
     review_prompt = (
-        f"Several AI models were asked: \"{topic}\"\n\n"
+        f"Three AI models were asked: \"{topic}\"\n\n"
         f"Here are their anonymized responses:\n\n{answers_block}\n\n"
         "As a peer reviewer:\n"
         "1. Rank the responses from best to worst (by label)\n"
@@ -185,9 +181,10 @@ async def council(
         gemini.ask(review_prompt, timeout=timeout),
     )
 
-    # ── Stage 3: Return everything for Claude (chairman) to synthesize ──
+    # ── Stage 3: Return everything for Claude to do its own review + synthesize ──
     return {
         "topic": topic,
+        "label_map": label_map,
         "stage1_individual": {
             "codex": codex_resp,
             "gemini": gemini_resp,
@@ -195,6 +192,6 @@ async def council(
         "stage2_peer_review": {
             "codex_review": codex_review,
             "gemini_review": gemini_review,
+            "review_prompt_for_claude": review_prompt,
         },
-        "label_map": {label: model for label, model in labels},
     }

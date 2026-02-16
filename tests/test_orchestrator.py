@@ -77,48 +77,11 @@ async def test_ask_single_handles_error():
 
 @pytest.mark.asyncio
 async def test_council_three_stages():
-    """Council runs stage 1 (individual) and stage 2 (peer review)."""
+    """Council runs all three stages with all three models participating."""
     codex_resp = _ok_response("codex", "Codex individual answer")
     gemini_resp = _ok_response("gemini", "Gemini individual answer")
     codex_review = _ok_response("codex", "Codex review of answers")
     gemini_review = _ok_response("gemini", "Gemini review of answers")
-
-    with (
-        patch("bigbrain.orchestrator.codex") as mock_codex,
-        patch("bigbrain.orchestrator.gemini") as mock_gemini,
-    ):
-        # Stage 1 returns individual answers, Stage 2 returns reviews
-        mock_codex.ask = AsyncMock(side_effect=[codex_resp, codex_review])
-        mock_gemini.ask = AsyncMock(side_effect=[gemini_resp, gemini_review])
-
-        result = await council("test topic", include_context=False)
-
-        # Verify structure
-        assert result["topic"] == "test topic"
-        assert "stage1_individual" in result
-        assert "stage2_peer_review" in result
-        assert "label_map" in result
-
-        # Stage 1: both models answered
-        assert result["stage1_individual"]["codex"].response == "Codex individual answer"
-        assert result["stage1_individual"]["gemini"].response == "Gemini individual answer"
-
-        # Stage 2: both models reviewed
-        assert result["stage2_peer_review"]["codex_review"].response == "Codex review of answers"
-        assert result["stage2_peer_review"]["gemini_review"].response == "Gemini review of answers"
-
-        # Each model was called twice (once for answer, once for review)
-        assert mock_codex.ask.call_count == 2
-        assert mock_gemini.ask.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_council_with_claude_opinion():
-    """Council includes Claude's opinion in peer review when provided."""
-    codex_resp = _ok_response("codex", "Codex answer")
-    gemini_resp = _ok_response("gemini", "Gemini answer")
-    codex_review = _ok_response("codex", "Review with 3 models")
-    gemini_review = _ok_response("gemini", "Review with 3 models")
 
     with (
         patch("bigbrain.orchestrator.codex") as mock_codex,
@@ -129,18 +92,72 @@ async def test_council_with_claude_opinion():
 
         result = await council(
             "test topic",
-            claude_opinion="Claude's take on this",
+            claude_opinion="Claude's take",
             include_context=False,
         )
 
-        # Label map should include claude
-        assert "claude" in result["label_map"].values()
-        assert "codex" in result["label_map"].values()
-        assert "gemini" in result["label_map"].values()
+        # Verify structure
+        assert result["topic"] == "test topic"
+        assert "stage1_individual" in result
+        assert "stage2_peer_review" in result
+        assert "label_map" in result
 
-        # Stage 2 review prompt should contain "Model A" (claude's anonymized label)
+        # All three models in label map
+        assert result["label_map"] == {
+            "Model A": "claude",
+            "Model B": "codex",
+            "Model C": "gemini",
+        }
+
+        # Stage 1: Codex and Gemini answered
+        assert result["stage1_individual"]["codex"].response == "Codex individual answer"
+        assert result["stage1_individual"]["gemini"].response == "Gemini individual answer"
+
+        # Stage 2: Codex and Gemini reviewed
+        assert result["stage2_peer_review"]["codex_review"].response == "Codex review of answers"
+        assert result["stage2_peer_review"]["gemini_review"].response == "Gemini review of answers"
+
+        # Stage 2: review prompt returned for Claude to do its own review
+        assert "review_prompt_for_claude" in result["stage2_peer_review"]
+        review_prompt = result["stage2_peer_review"]["review_prompt_for_claude"]
+        assert "Model A" in review_prompt
+        assert "Model B" in review_prompt
+        assert "Model C" in review_prompt
+        assert "Claude's take" in review_prompt
+
+        # Each model called twice (answer + review)
+        assert mock_codex.ask.call_count == 2
+        assert mock_gemini.ask.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_council_anonymizes_all_three():
+    """Peer review prompt contains all three answers anonymized."""
+    codex_resp = _ok_response("codex", "Codex answer")
+    gemini_resp = _ok_response("gemini", "Gemini answer")
+    codex_review = _ok_response("codex", "review")
+    gemini_review = _ok_response("gemini", "review")
+
+    with (
+        patch("bigbrain.orchestrator.codex") as mock_codex,
+        patch("bigbrain.orchestrator.gemini") as mock_gemini,
+    ):
+        mock_codex.ask = AsyncMock(side_effect=[codex_resp, codex_review])
+        mock_gemini.ask = AsyncMock(side_effect=[gemini_resp, gemini_review])
+
+        result = await council(
+            "test topic",
+            claude_opinion="Claude's opinion here",
+            include_context=False,
+        )
+
+        # The review prompt sent to Codex should contain all three anonymized answers
         review_call_args = mock_codex.ask.call_args_list[1]
         review_prompt = review_call_args[0][0]
+        assert "Claude's opinion here" in review_prompt  # Model A content
+        assert "Codex answer" in review_prompt            # Model B content
+        assert "Gemini answer" in review_prompt           # Model C content
+        # Labels are anonymous — no "Model A is Claude" or similar attribution
         assert "Model A" in review_prompt
         assert "Model B" in review_prompt
         assert "Model C" in review_prompt

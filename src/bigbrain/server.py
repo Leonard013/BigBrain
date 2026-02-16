@@ -156,26 +156,32 @@ async def request_debate(
 @mcp.tool()
 async def request_council(
     topic: str,
-    claude_opinion: str | None = None,
+    claude_opinion: str,
     project_path: str | None = None,
     include_context: bool = True,
     timeout: float = DEBATE_TIMEOUT,
 ) -> dict:
-    """Run a three-stage council (inspired by Karpathy's llm-council).
+    """Run a three-stage council where all three models participate equally.
 
-    Stage 1 — Individual: Codex and Gemini answer the question independently.
-    Stage 2 — Peer Review: Each model reviews ALL answers (anonymized as
-              Model A/B/C) and ranks them with critiques.
-    Stage 3 — Chairman: You (Claude) receive everything and synthesize the
-              final answer. You are the chairman.
+    Inspired by Karpathy's llm-council. All three models (Claude, Codex, Gemini)
+    participate in every stage.
 
-    If you pass your own opinion via claude_opinion, it gets included as one
-    of the anonymized responses in the peer review stage (so the other models
-    review your answer too, without knowing it's yours).
+    IMPORTANT: Before calling this tool, you MUST first form your own opinion
+    on the topic and pass it as claude_opinion. This is Stage 1 for you.
+
+    Stage 1 — Individual: You provide your opinion. Codex and Gemini answer
+              independently and in parallel.
+    Stage 2 — Peer Review: All three answers are anonymized (Model A/B/C).
+              Codex and Gemini each review and rank all answers.
+              The review_prompt_for_claude field contains the same anonymized
+              prompt — use it to do YOUR OWN peer review as well.
+    Stage 3 — Chairman: After doing your own review, synthesize all three
+              individual answers + all three peer reviews (Codex's, Gemini's,
+              and yours) into the final answer.
 
     Args:
         topic: The question or topic for the council.
-        claude_opinion: Optional — your own initial answer to include in peer review.
+        claude_opinion: Your (Claude's) initial answer — REQUIRED.
         project_path: Optional project root path.
         include_context: Whether to prepend shared context.
         timeout: Max seconds per individual call.
@@ -184,20 +190,20 @@ async def request_council(
         topic, claude_opinion, project_path, include_context, timeout
     )
 
-    label_map = result["label_map"]
     stage1 = result["stage1_individual"]
     stage2 = result["stage2_peer_review"]
 
     return {
         "topic": result["topic"],
-        "label_map": label_map,
+        "label_map": result["label_map"],
         "stage1_individual": {
             name: _format_response(resp)
             for name, resp in stage1.items()
         },
         "stage2_peer_review": {
-            name: _format_response(resp)
-            for name, resp in stage2.items()
+            "codex_review": _format_response(stage2["codex_review"]),
+            "gemini_review": _format_response(stage2["gemini_review"]),
+            "review_prompt_for_claude": stage2["review_prompt_for_claude"],
         },
     }
 
