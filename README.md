@@ -22,6 +22,15 @@ You <-> Claude Code <-> BigBrain MCP Server <-> Codex CLI / Gemini CLI
 | `ask_both_models` | Ask both in parallel |
 | `request_consensus` | Both answer, then synthesize agreements/differences |
 | `request_debate` | Multi-round debate (1-5 rounds) |
+| `request_council` | Three-stage council (inspired by [Karpathy's llm-council](https://github.com/karpathy/llm-council)) |
+
+### Council (three-stage process)
+
+1. **Individual** — Codex and Gemini answer independently
+2. **Peer Review** — each model reviews all answers (anonymized as Model A/B/C), ranks and critiques them
+3. **Chairman** — Claude receives everything and synthesizes the final answer
+
+Claude can optionally include its own opinion as one of the anonymized responses, so the other models review it without bias.
 
 ## Setup
 

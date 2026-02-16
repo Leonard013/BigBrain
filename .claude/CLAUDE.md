@@ -24,7 +24,7 @@ Both CLIs use their own cached OAuth auth — no API keys needed.
 ## Architecture
 
 - **FastMCP** server over stdio transport, registered at user scope
-- **5 tools**: `ask_codex`, `ask_gemini`, `ask_both_models`, `request_consensus`, `request_debate`
+- **6 tools**: `ask_codex`, `ask_gemini`, `ask_both_models`, `request_consensus`, `request_debate`, `request_council`
 - **Models**: Codex uses `gpt-5.3-codex`, Gemini uses `gemini-3-pro-preview` (configurable via env vars)
 - **Shared context**: CLAUDE.md + MEMORY.md injected as read-only preamble into every prompt sent to other models. Claude is the sole writer; Codex/Gemini only read.
 - **Error handling**: Failed CLI calls return `ModelResponse(success=False)` — never exceptions

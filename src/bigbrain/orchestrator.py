@@ -125,3 +125,76 @@ async def debate(
         })
 
     return {"topic": topic, "rounds": history}
+
+
+async def council(
+    topic: str,
+    claude_opinion: str | None = None,
+    project_path: str | None = None,
+    include_context: bool = True,
+    timeout: float = DEBATE_TIMEOUT,
+) -> dict:
+    """Three-stage council inspired by Karpathy's llm-council.
+
+    Stage 1 — Individual: Each model answers independently.
+    Stage 2 — Peer Review: Each model reviews all answers (anonymized) and ranks them.
+    Stage 3 — Chairman: Returns everything so Claude can synthesize as chairman.
+    """
+    full_topic = build_prompt_with_context(topic, project_path, include_context)
+
+    # ── Stage 1: Individual responses ──
+    codex_resp, gemini_resp = await asyncio.gather(
+        codex.ask(full_topic, timeout=timeout),
+        gemini.ask(full_topic, timeout=timeout),
+    )
+
+    # Build anonymized answers for peer review
+    answers: dict[str, str] = {}
+    labels = []
+
+    if claude_opinion:
+        answers["Model A"] = claude_opinion
+        labels.append(("Model A", "claude"))
+    answers["Model B" if claude_opinion else "Model A"] = (
+        codex_resp.response if codex_resp.success else "[failed to respond]"
+    )
+    labels.append(("Model B" if claude_opinion else "Model A", "codex"))
+    answers["Model C" if claude_opinion else "Model B"] = (
+        gemini_resp.response if gemini_resp.success else "[failed to respond]"
+    )
+    labels.append(("Model C" if claude_opinion else "Model B", "gemini"))
+
+    answers_block = "\n\n".join(
+        f"=== {label} ===\n{text}" for label, text in answers.items()
+    )
+
+    # ── Stage 2: Peer review (anonymized) ──
+    review_prompt = (
+        f"Several AI models were asked: \"{topic}\"\n\n"
+        f"Here are their anonymized responses:\n\n{answers_block}\n\n"
+        "As a peer reviewer:\n"
+        "1. Rank the responses from best to worst (by label)\n"
+        "2. For each response, note its key strengths and weaknesses\n"
+        "3. Identify any factual errors or important omissions\n"
+        "4. State which response you'd recommend and why\n"
+        "Be concise and critical."
+    )
+
+    codex_review, gemini_review = await asyncio.gather(
+        codex.ask(review_prompt, timeout=timeout),
+        gemini.ask(review_prompt, timeout=timeout),
+    )
+
+    # ── Stage 3: Return everything for Claude (chairman) to synthesize ──
+    return {
+        "topic": topic,
+        "stage1_individual": {
+            "codex": codex_resp,
+            "gemini": gemini_resp,
+        },
+        "stage2_peer_review": {
+            "codex_review": codex_review,
+            "gemini_review": gemini_review,
+        },
+        "label_map": {label: model for label, model in labels},
+    }

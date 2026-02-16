@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 
 from bigbrain.config import CONSENSUS_TIMEOUT, DEBATE_TIMEOUT, DEFAULT_TIMEOUT
 from bigbrain.models.base import ModelResponse
-from bigbrain.orchestrator import ask_both, ask_single, consensus, debate
+from bigbrain.orchestrator import ask_both, ask_single, consensus, council, debate
 
 mcp = FastMCP(
     name="BigBrain",
@@ -151,6 +151,55 @@ async def request_debate(
             "gemini": _format_response(rd["gemini"]),
         })
     return {"topic": result["topic"], "rounds": formatted_rounds}
+
+
+@mcp.tool()
+async def request_council(
+    topic: str,
+    claude_opinion: str | None = None,
+    project_path: str | None = None,
+    include_context: bool = True,
+    timeout: float = DEBATE_TIMEOUT,
+) -> dict:
+    """Run a three-stage council (inspired by Karpathy's llm-council).
+
+    Stage 1 — Individual: Codex and Gemini answer the question independently.
+    Stage 2 — Peer Review: Each model reviews ALL answers (anonymized as
+              Model A/B/C) and ranks them with critiques.
+    Stage 3 — Chairman: You (Claude) receive everything and synthesize the
+              final answer. You are the chairman.
+
+    If you pass your own opinion via claude_opinion, it gets included as one
+    of the anonymized responses in the peer review stage (so the other models
+    review your answer too, without knowing it's yours).
+
+    Args:
+        topic: The question or topic for the council.
+        claude_opinion: Optional — your own initial answer to include in peer review.
+        project_path: Optional project root path.
+        include_context: Whether to prepend shared context.
+        timeout: Max seconds per individual call.
+    """
+    result = await council(
+        topic, claude_opinion, project_path, include_context, timeout
+    )
+
+    label_map = result["label_map"]
+    stage1 = result["stage1_individual"]
+    stage2 = result["stage2_peer_review"]
+
+    return {
+        "topic": result["topic"],
+        "label_map": label_map,
+        "stage1_individual": {
+            name: _format_response(resp)
+            for name, resp in stage1.items()
+        },
+        "stage2_peer_review": {
+            name: _format_response(resp)
+            for name, resp in stage2.items()
+        },
+    }
 
 
 if __name__ == "__main__":
