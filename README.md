@@ -1,8 +1,6 @@
 # 🧠 BigBrain
 
-MCP server that lets Claude Code talk to Codex (OpenAI) and Gemini (Google) CLIs. Claude stays in charge — the other models provide second opinions. No API keys needed; both CLIs use their own cached OAuth. *Free as in beer* 🍺
-
-Inspired by [Karpathy's llm-council](https://github.com/karpathy/llm-council).
+MCP server that lets Claude Code talk to Codex (OpenAI) and Gemini (Google) CLIs. Claude stays in charge — the other models provide second opinions. No API keys needed; both CLIs use their own cached OAuth.
 
 ## 🍹 Origin Story
 
@@ -117,20 +115,6 @@ Models default to `gpt-5.3-codex` and `gemini-3-pro-preview`. Override via env v
 ```bash
 export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"
 export BIGBRAIN_GEMINI_MODEL="gemini-3-pro-preview"
-```
-
-## 📁 Project Structure
-
-```
-src/bigbrain/
-  server.py        # FastMCP app — all 6 MCP tools
-  config.py        # Paths, timeouts, model names
-  context.py       # CLAUDE.md + MEMORY.md reader
-  models/
-    base.py        # Abstract CLIModelAdapter (async subprocess)
-    codex.py       # Codex CLI adapter
-    gemini.py      # Gemini CLI adapter
-  orchestrator.py  # Parallel, consensus, debate, council patterns
 ```
 
 ## 🧪 Dev
