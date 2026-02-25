@@ -15,7 +15,7 @@ GEMINI_CMD = os.environ.get(
 
 # Model selection
 CODEX_MODEL = os.environ.get("BIGBRAIN_CODEX_MODEL", "gpt-5.3-codex")
-GEMINI_MODEL = os.environ.get("BIGBRAIN_GEMINI_MODEL", "gemini-3-pro-preview")
+GEMINI_MODEL = os.environ.get("BIGBRAIN_GEMINI_MODEL", "gemini-3.1-pro-preview")
 
 # Timeouts (seconds)
 DEFAULT_TIMEOUT = 120

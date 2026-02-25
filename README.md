@@ -110,11 +110,11 @@ Start a new session. Run `/mcp` — `bigbrain` should show as connected. ✅
 
 ## ⚙️ Configuration
 
-Models default to `gpt-5.3-codex` and `gemini-3-pro-preview`. Override via env vars:
+Models default to `gpt-5.3-codex` and `gemini-3.1-pro-preview`. Override via env vars:
 
 ```bash
 export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"
-export BIGBRAIN_GEMINI_MODEL="gemini-3-pro-preview"
+export BIGBRAIN_GEMINI_MODEL="gemini-3.1-pro-preview"
 ```
 
 ## 🧪 Dev
