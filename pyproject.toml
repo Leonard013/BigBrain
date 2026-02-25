@@ -18,6 +18,9 @@ dev = [
     "pytest-asyncio",
 ]
 
+[project.scripts]
+bigbrain = "bigbrain.server:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

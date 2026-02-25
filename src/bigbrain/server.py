@@ -208,5 +208,9 @@ async def request_council(
     }
 
 
-if __name__ == "__main__":
+def main():
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

@@ -57,72 +57,66 @@ Stage 1: Individual 🗣️       Stage 2: Peer Review 🔍      Stage 3: Chairm
 2. **🔍 Peer Review** — All answers are anonymized as Model A/B/C. Codex and Gemini each review and rank them. Claude receives the same anonymized prompt and does its own review too. *No model knows which answer is whose* 🕵️
 3. **🏛️ Chairman** — Claude synthesizes all three individual answers + all three peer reviews into the final answer.
 
-## 🚀 Setup
+## 🚀 Quick Start
 
-### 1. Install CLIs
+### 1. Prerequisites
+
+Install the Codex and Gemini CLIs, then authenticate once:
 
 ```bash
 npm install -g @openai/codex @google/gemini-cli
-```
-
-Authenticate each (one-time):
-
-```bash
 codex   # follow OAuth prompts 🔐
 gemini  # follow OAuth prompts 🔐
 ```
 
-### 2. Create conda environment 🐍
+### 2. Install & Register *(one command each)*
+
+```bash
+pip install git+https://github.com/Leonard013/BigBrain.git
+claude mcp add bigbrain -- bigbrain
+```
+
+### 3. Done 🎉
+
+Restart Claude Code, run `/mcp` — `bigbrain` should show as connected. ✅
+
+That's it. Start asking Claude to use `ask_codex`, `ask_gemini`, `request_council`, etc.
+
+---
+
+<details>
+<summary>⚙️ Advanced Configuration</summary>
+
+#### Custom Python environment
+
+If you want a dedicated env (conda, venv, etc.):
 
 ```bash
 conda create -n bigbrain python=3.12 -y
+conda activate bigbrain
+pip install git+https://github.com/Leonard013/BigBrain.git
 ```
 
-### 3. Install BigBrain
+Then register with the full path to the `bigbrain` binary:
 
 ```bash
-/path/to/miniconda3/envs/bigbrain/bin/pip install -e /path/to/BigBrain
+claude mcp add bigbrain -- /path/to/envs/bigbrain/bin/bigbrain
 ```
 
-### 4. Register with Claude Code
-
-Add to `~/.claude.json` under `mcpServers`:
-
-```json
-{
-  "bigbrain": {
-    "command": "/path/to/BigBrain/run_server.sh",
-    "args": []
-  }
-}
-```
-
-Update `run_server.sh` to point to your conda python:
-
-```bash
-#!/usr/bin/env bash
-exec /path/to/miniconda3/envs/bigbrain/bin/python -m bigbrain.server "$@"
-```
-
-### 5. Restart Claude Code 🔄
-
-Start a new session. Run `/mcp` — `bigbrain` should show as connected. ✅
-
-## ⚙️ Configuration
-
-Models default to `gpt-5.3-codex` and `gemini-3.1-pro-preview`. Override via env vars:
+#### Override models
 
 ```bash
 export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"
 export BIGBRAIN_GEMINI_MODEL="gemini-3.1-pro-preview"
 ```
 
-## 🧪 Dev
+#### Dev install (from source)
 
 ```bash
-# run tests
-/path/to/miniconda3/envs/bigbrain/bin/pytest tests/ -v
-
-# reinstall after changes
-/path/to/miniconda3/envs/bigbrain/bin/pip install -e .
+git clone https://github.com/Leonard013/BigBrain.git
+cd BigBrain
+pip install -e ".[dev]"
+pytest tests/ -v
 ```
+
+</details>
