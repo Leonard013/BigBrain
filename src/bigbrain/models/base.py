@@ -43,12 +43,13 @@ class CLIModelAdapter(ABC):
         """Extract the model's answer from CLI output."""
 
     def build_env(self) -> dict[str, str]:
-        """Return environment dict for subprocess with ~/.npm-global/bin on PATH."""
+        """Return environment dict with the CLI's parent directory on PATH."""
         env = dict(os.environ)
-        npm_bin = str(Path.home() / ".npm-global" / "bin")
+        cli_dir = str(Path(self.cli_command).parent)
         path = env.get("PATH", "")
-        if npm_bin not in path:
-            env["PATH"] = f"{npm_bin}:{path}"
+        # Add the CLI's directory to PATH so the subprocess can find it
+        if cli_dir != "." and cli_dir not in path:
+            env["PATH"] = f"{cli_dir}:{path}"
         return env
 
     async def ask(

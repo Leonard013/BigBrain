@@ -1,17 +1,54 @@
 """Configuration and path resolution for BigBrain."""
 
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
-# CLI commands — use full paths since MCP subprocess won't have user PATH
-CODEX_CMD = os.environ.get(
-    "BIGBRAIN_CODEX_CMD",
-    str(Path.home() / ".npm-global" / "bin" / "codex"),
-)
-GEMINI_CMD = os.environ.get(
-    "BIGBRAIN_GEMINI_CMD",
-    str(Path.home() / ".npm-global" / "bin" / "gemini"),
-)
+
+def _find_cli(name: str) -> str:
+    """Find a CLI executable by searching PATH, npm global prefix, and common locations."""
+    # 1. shutil.which — checks the current PATH
+    found = shutil.which(name)
+    if found:
+        return found
+
+    # 2. Ask npm where its global bin is
+    try:
+        result = subprocess.run(
+            ["npm", "prefix", "-g"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            npm_bin = Path(result.stdout.strip()) / "bin" / name
+            if npm_bin.is_file():
+                return str(npm_bin)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # 3. Common locations
+    candidates = [
+        Path.home() / ".npm-global" / "bin" / name,
+        Path("/usr/local/bin") / name,
+        Path("/usr/bin") / name,
+    ]
+    # nvm versions
+    nvm_dir = Path.home() / ".nvm" / "versions" / "node"
+    if nvm_dir.is_dir():
+        for version_dir in sorted(nvm_dir.iterdir(), reverse=True):
+            candidates.append(version_dir / "bin" / name)
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+
+    # 4. Fall back to bare name — let the OS resolve it at runtime
+    return name
+
+
+# CLI commands — auto-detected, overridable via env vars
+CODEX_CMD = os.environ.get("BIGBRAIN_CODEX_CMD", _find_cli("codex"))
+GEMINI_CMD = os.environ.get("BIGBRAIN_GEMINI_CMD", _find_cli("gemini"))
 
 # Model selection
 CODEX_MODEL = os.environ.get("BIGBRAIN_CODEX_MODEL", "gpt-5.3-codex")
