@@ -1,6 +1,7 @@
 """Orchestration patterns for multi-model collaboration."""
 
 import asyncio
+import random
 
 from bigbrain.config import CONSENSUS_TIMEOUT, DEBATE_TIMEOUT, DEFAULT_TIMEOUT
 from bigbrain.context import build_prompt_with_context
@@ -152,13 +153,19 @@ async def council(
         gemini.ask(full_topic, timeout=timeout),
     )
 
-    # Build anonymized answers — random-looking labels, all three models
-    label_map = {"Model A": "claude", "Model B": "codex", "Model C": "gemini"}
-    answers = {
-        "Model A": claude_opinion,
-        "Model B": codex_resp.response if codex_resp.success else "[failed to respond]",
-        "Model C": gemini_resp.response if gemini_resp.success else "[failed to respond]",
+    # Build anonymized answers — labels are shuffled each call so no model
+    # can learn a fixed mapping over repeated invocations.
+    labels = ["Model A", "Model B", "Model C"]
+    models = ["claude", "codex", "gemini"]
+    random.shuffle(models)
+    label_map = dict(zip(labels, models))
+
+    model_answers = {
+        "claude": claude_opinion,
+        "codex": codex_resp.response if codex_resp.success else "[failed to respond]",
+        "gemini": gemini_resp.response if gemini_resp.success else "[failed to respond]",
     }
+    answers = {label: model_answers[model] for label, model in label_map.items()}
 
     answers_block = "\n\n".join(
         f"=== {label} ===\n{text}" for label, text in answers.items()

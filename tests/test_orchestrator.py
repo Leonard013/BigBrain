@@ -102,12 +102,10 @@ async def test_council_three_stages():
         assert "stage2_peer_review" in result
         assert "label_map" in result
 
-        # All three models in label map
-        assert result["label_map"] == {
-            "Model A": "claude",
-            "Model B": "codex",
-            "Model C": "gemini",
-        }
+        # All three models in label map (order is randomized each call)
+        label_map = result["label_map"]
+        assert set(label_map.keys()) == {"Model A", "Model B", "Model C"}
+        assert set(label_map.values()) == {"claude", "codex", "gemini"}
 
         # Stage 1: Codex and Gemini answered
         assert result["stage1_individual"]["codex"].response == "Codex individual answer"
