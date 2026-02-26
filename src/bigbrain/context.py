@@ -30,7 +30,16 @@ def build_prompt_with_context(
     if not claude_md and not memory_md:
         return prompt
 
-    sections: list[str] = ["=== Shared Project Context (read-only) ===", ""]
+    sections: list[str] = [
+        "=== Instructions ===",
+        "IMPORTANT: Always provide your COMPLETE, FULL response. "
+        "Do NOT truncate, summarize, or cut short your answer. "
+        "Do NOT say 'the response is too long' or similar. "
+        "Give the entire answer no matter how long it is.",
+        "",
+        "=== Shared Project Context (read-only) ===",
+        "",
+    ]
     if claude_md:
         sections.append(f"[CLAUDE.md]\n{claude_md}\n")
     if memory_md:

@@ -46,20 +46,19 @@ src/bigbrain/
 
 ## Key Paths
 
-- Conda env: `/home/leonardo/miniconda3/envs/bigbrain/`
 - CLIs: `~/.npm-global/bin/codex`, `~/.npm-global/bin/gemini`
-- Launcher: `run_server.sh` (uses conda python directly)
-- MCP registration: `~/.claude/settings.json` → `mcpServers.bigbrain`
+- Launcher: `run_server.sh` (uses the `bigbrain` entry point)
+- MCP registration: `~/.claude.json` → `mcpServers.bigbrain`
 
 ## Dev Commands
 
 ```bash
 # Run tests
-/home/leonardo/miniconda3/envs/bigbrain/bin/pytest tests/ -v
+pytest tests/ -v
 
 # Run a single test file
-/home/leonardo/miniconda3/envs/bigbrain/bin/pytest tests/test_codex.py -v
+pytest tests/test_codex.py -v
 
 # Install after changes
-/home/leonardo/miniconda3/envs/bigbrain/bin/pip install -e .
+pip install -e .
 ```
