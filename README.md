@@ -106,7 +106,7 @@ claude mcp add bigbrain -- /path/to/envs/bigbrain/bin/bigbrain
 #### Override models
 
 ```bash
-export BIGBRAIN_CODEX_MODEL="gpt-5.3-codex"
+export BIGBRAIN_CODEX_MODEL="gpt-5.4"
 export BIGBRAIN_GEMINI_MODEL="gemini-3.1-pro-preview"
 ```
 

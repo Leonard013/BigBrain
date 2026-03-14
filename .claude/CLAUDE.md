@@ -25,7 +25,7 @@ Both CLIs use their own cached OAuth auth — no API keys needed.
 
 - **FastMCP** server over stdio transport, registered at user scope
 - **6 tools**: `ask_codex`, `ask_gemini`, `ask_both_models`, `request_consensus`, `request_debate`, `request_council`
-- **Models**: Codex uses `gpt-5.3-codex`, Gemini uses `gemini-3.1-pro-preview` (configurable via env vars)
+- **Models**: Codex uses `gpt-5.4`, Gemini uses `gemini-3.1-pro-preview` (configurable via env vars)
 - **Shared context**: CLAUDE.md + MEMORY.md injected as read-only preamble into every prompt sent to other models. Claude is the sole writer; Codex/Gemini only read.
 - **Error handling**: Failed CLI calls return `ModelResponse(success=False)` — never exceptions
 - **Dynamic project detection**: Tools accept optional `project_path` param, falls back to `BIGBRAIN_PROJECT_PATH` env var, then cwd
@@ -39,7 +39,7 @@ src/bigbrain/
   context.py       # CLAUDE.md + MEMORY.md reader and prompt builder
   models/
     base.py        # Abstract CLIModelAdapter (async subprocess)
-    codex.py       # codex exec --model gpt-5.3-codex --json --full-auto
+    codex.py       # codex exec --model gpt-5.4 --json --full-auto
     gemini.py      # gemini --model gemini-3.1-pro-preview -p --output-format json
   orchestrator.py  # Parallel, consensus, and debate patterns
 ```

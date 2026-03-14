@@ -51,7 +51,7 @@ CODEX_CMD = os.environ.get("BIGBRAIN_CODEX_CMD", _find_cli("codex"))
 GEMINI_CMD = os.environ.get("BIGBRAIN_GEMINI_CMD", _find_cli("gemini"))
 
 # Model selection
-CODEX_MODEL = os.environ.get("BIGBRAIN_CODEX_MODEL", "gpt-5.3-codex")
+CODEX_MODEL = os.environ.get("BIGBRAIN_CODEX_MODEL", "gpt-5.4")
 GEMINI_MODEL = os.environ.get("BIGBRAIN_GEMINI_MODEL", "gemini-3.1-pro-preview")
 
 # Timeouts (seconds)
