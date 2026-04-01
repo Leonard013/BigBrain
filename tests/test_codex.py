@@ -17,7 +17,9 @@ def test_codex_build_command():
     assert "--json" in cmd
     assert "--full-auto" in cmd
     assert "--skip-git-repo-check" in cmd
-    assert "hello world" in cmd
+    # Prompt is sent via stdin, not as a CLI arg — "-" tells codex to read stdin
+    assert "-" in cmd
+    assert adapter.get_stdin_data("hello world") == b"hello world"
 
 
 def test_codex_parse_documented_format():

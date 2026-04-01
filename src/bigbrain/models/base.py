@@ -38,6 +38,10 @@ class CLIModelAdapter(ABC):
     def build_command(self, prompt: str) -> list[str]:
         """Build the command-line arguments for a prompt."""
 
+    def get_stdin_data(self, prompt: str) -> bytes | None:
+        """Return data to feed to the subprocess via stdin, or None to close stdin."""
+        return None
+
     @abstractmethod
     def parse_output(self, stdout: str, stderr: str) -> str:
         """Extract the model's answer from CLI output."""
@@ -60,14 +64,16 @@ class CLIModelAdapter(ABC):
         start = time.monotonic()
 
         try:
+            stdin_data = self.get_stdin_data(prompt)
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
+                stdin=asyncio.subprocess.PIPE if stdin_data else asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=self.build_env(),
             )
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout
+                proc.communicate(input=stdin_data), timeout=timeout
             )
             elapsed = time.monotonic() - start
             stdout = stdout_bytes.decode("utf-8", errors="replace")

@@ -16,12 +16,17 @@ class CodexAdapter(CLIModelAdapter):
         return CODEX_CMD
 
     def build_command(self, prompt: str) -> list[str]:
+        # Use "-" as prompt so codex reads from stdin instead of trying to
+        # read the MCP server's stdin (which causes EAGAIN / os error 11).
         return [
             self.cli_command, "exec",
             "--model", CODEX_MODEL,
             "--json", "--full-auto", "--skip-git-repo-check",
-            prompt,
+            "-",
         ]
+
+    def get_stdin_data(self, prompt: str) -> bytes | None:
+        return prompt.encode("utf-8")
 
     def parse_output(self, stdout: str, stderr: str) -> str:
         """Parse JSONL event stream from codex exec --json.
